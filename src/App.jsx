@@ -104,7 +104,7 @@ const GymkhanaDashboard = lazy(
   () => import("./Modules/Gymkhana/GymkhanaDashboard.jsx"),
 );
 
-const Examination = lazy(() => import("./Modules/Examination/examination"));
+const Examination = lazy(() => import("./Modules/Examination"));
 
 const ProgrammeCurriculumRoutes = lazy(
   () => import("./Modules/Program_curriculum/programmCurriculum"),

@@ -1,5 +1,27 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+const normalizeRoleKey = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase();
+
+const resolveAccessibleModulesForRole = (accessibleModules, role) => {
+  if (!accessibleModules || typeof accessibleModules !== "object") {
+    return {};
+  }
+
+  if (accessibleModules[role]) {
+    return accessibleModules[role];
+  }
+
+  const normalizedRole = normalizeRoleKey(role);
+  const matchedKey = Object.keys(accessibleModules).find(
+    (key) => normalizeRoleKey(key) === normalizedRole,
+  );
+
+  return (matchedKey && accessibleModules[matchedKey]) || {};
+};
+
 const userSlice = createSlice({
   name: "user",
   initialState: {
@@ -32,8 +54,10 @@ const userSlice = createSlice({
       state.accessibleModules = action.payload;
     },
     setCurrentAccessibleModules: (state) => {
-      state.currentAccessibleModules =
-        state.accessibleModules[state.role] || {};
+      state.currentAccessibleModules = resolveAccessibleModulesForRole(
+        state.accessibleModules,
+        state.role,
+      );
     },
     setTotalNotifications: (state, action) => {
       state.totalNotifications = action.payload;

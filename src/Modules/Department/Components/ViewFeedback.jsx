@@ -21,6 +21,7 @@ import {
   Group,
   Button,
 } from "@mantine/core";
+import { host } from "../../../routes/globalRoutes";
 
 export default function ViewFeedback({ branch }) {
   const [data, setData] = useState([]);
@@ -35,7 +36,7 @@ export default function ViewFeedback({ branch }) {
     const fetchFeedback = async () => {
       try {
         const response = await axios.get(
-          "http://127.0.0.1:8000/dep/api/feedback/",
+          `${host}/dep/api/feedback/`,
           {
             headers: {
               Authorization: `Token ${authToken}`,

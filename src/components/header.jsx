@@ -24,6 +24,7 @@ import { setRole, setCurrentAccessibleModules } from "../redux/userslice";
 import classes from "../Modules/Dashboard/Dashboard.module.css";
 import avatarImage from "../assets/avatar.png";
 import { setPfNo } from "../redux/pfNoSlice";
+import { normalizeRole } from "../helper/roleUtils";
 
 import { logoutRoute, updateRoleRoute } from "../routes/dashboardRoutes";
 
@@ -32,6 +33,7 @@ function Header({ opened, toggleSidebar }) {
   const username = useSelector((state) => state.user.username);
   const roles = useSelector((state) => state.user.roles);
   const role = useSelector((state) => state.user.role);
+  const normalizedRole = normalizeRole(role);
   const badges = useSelector((state) => state.user.totalNotifications);
 
   const navigate = useNavigate();
@@ -199,7 +201,7 @@ function Header({ opened, toggleSidebar }) {
                       size="xs"
                       onClick={() =>
                         navigate(
-                          role === "student"
+                          normalizedRole === "student"
                             ? "/profile"
                             : "/facultyprofessionalprofile",
                         )

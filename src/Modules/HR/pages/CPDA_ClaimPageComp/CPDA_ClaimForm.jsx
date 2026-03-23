@@ -14,6 +14,7 @@ import {
 } from "@phosphor-icons/react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateForm, resetForm } from "../../../../redux/formSlice";
+import { host } from "../../../../routes/globalRoutes";
 import "./CPDA_ClaimForm.css";
 
 function CPDA_ClaimForm() {
@@ -31,7 +32,7 @@ function CPDA_ClaimForm() {
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/hr2/api/submit_cpda_reimbursement_form/",
+        `${host}/hr2/api/submit_cpda_reimbursement_form/`,
         {
           method: "POST",
           headers: {

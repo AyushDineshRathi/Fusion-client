@@ -40,9 +40,11 @@ import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import IIITLOGO from "../assets/IIITJ_logo.webp";
 import { setCurrentModule } from "../redux/moduleslice";
+import { normalizeRole } from "../helper/roleUtils";
 
 function SidebarContent({ isCollapsed, toggleSidebar }) {
   const role = useSelector((state) => state.user.role);
+  const normalizedRole = normalizeRole(role);
 
   const deployedModules = [
     "complaint_management",
@@ -87,9 +89,9 @@ function SidebarContent({ isCollapsed, toggleSidebar }) {
       id: "program_and_curriculum",
       icon: <CurriculumIcon size={18} />,
       url:
-        role === "acadadmin" || role === "studentacadadmin"
+        normalizedRole === "acadadmin" || normalizedRole === "studentacadadmin"
           ? "/programme_curriculum/acad_view_all_programme"
-          : role === "student"
+          : normalizedRole === "student"
             ? "/programme_curriculum/view_all_programmes"
             : "/programme_curriculum/faculty_view_all_programmes",
     },
@@ -214,7 +216,10 @@ function SidebarContent({ isCollapsed, toggleSidebar }) {
       label: "Profile",
       id: "profile",
       icon: <ProfileIcon size={18} />,
-      url: role === "student" ? "/profile" : "/facultyprofessionalprofile",
+      url:
+        normalizedRole === "student"
+          ? "/profile"
+          : "/facultyprofessionalprofile",
     },
     { label: "Settings", icon: <SettingsIcon size={18} /> },
     { label: "Help", icon: <HelpIcon size={18} /> },
@@ -241,9 +246,9 @@ function SidebarContent({ isCollapsed, toggleSidebar }) {
 
     // HealthCare Center icon clicked navigation
     if (item.id === "phc") {
-      if (role === "Compounder") {
+      if (normalizedRole === "compounder") {
         path = "/healthcenter/compounder/patient-log";
-      } else if (role === "student" || role === "Professor") {
+      } else if (["student", "professor"].includes(normalizedRole)) {
         path = "/healthcenter/student/history";
       }
     }
@@ -273,7 +278,11 @@ function SidebarContent({ isCollapsed, toggleSidebar }) {
         path = "/patent/director";
       } else if (role === "PCC Admin") {
         path = "/patent/pccAdmin";
-      } else if (applicantRoles.includes(role)) {
+      } else if (
+        applicantRoles
+          .map((itemRole) => normalizeRole(itemRole))
+          .includes(normalizedRole)
+      ) {
         path = "/patent/applicant";
       }
     }

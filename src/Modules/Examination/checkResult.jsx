@@ -1,136 +1,194 @@
-import React, { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Alert, Button, Card, Group, Select, Stack, Text } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
+import { useState } from "react";
 import {
-  Table,
-  Button,
-  Select,
-  Container,
-  Paper,
-  Grid,
-  ScrollArea,
-  Box,
-} from "@mantine/core";
-import axios from "axios"; // Import axios
-import "./styles/verify.css";
-import { check_result } from "./routes/examinationRoutes";
-function CheckResult() {
-  const [showContent, setShowContent] = useState(false);
-  const [selectedSemester, setSelectedSemester] = useState(null);
-  const [resultData, setResultData] = useState([]);
-  const [spi, setSpi] = useState(0);
-  const [su, setSu] = useState(0);
-  const [tu, setTu] = useState(0);
+  fetchMarksheet,
+  fetchStudentResults,
+  fetchStudentSemesters,
+  requestReevaluation,
+} from "./api";
+import ResultTable from "./components/ResultTable";
+import ReevaluationForm from "./components/ReevaluationForm";
 
-  const handleSearch = async () => {
-    const token = localStorage.getItem("authToken"); // Get the token from localStorage
-    // console.log(token);
-    if (!selectedSemester) {
-      alert("Please select a semester");
-      return;
-    }
-
-    try {
-      const response = await axios.post(
-        check_result,
-        { semester: selectedSemester },
-        {
-          headers: { Authorization: `Token ${token}` },
-        },
-      );
-      const { courses, spi, su, tu } = response.data;
-      //  console.log(selectedSemester);
-      setResultData(courses);
-      setSpi(spi);
-      setSu(su);
-      setTu(tu);
-      // console.log(courses);
-      // console.log(spi, su, tu);
-      setShowContent(true);
-    } catch (error) {
-      console.error("Error fetching result:", error);
-      alert("Failed to fetch result. Please try again.");
-    }
-  };
-
-  const rows = resultData.map((item, index) => (
-    <tr key={index}>
-      <td>{item.courseid}</td>
-      <td>{item.coursename}</td>
-      <td>{item.credits}</td>
-      <td>{item.grade}</td>
-    </tr>
-  ));
-
-  return (
-    <Container
-      size="xl"
-      style={{
-        borderRadius: "15px",
-        padding: "0px 20px",
-        boxShadow: "0px 0px 10px rgba(0, 0, 0, 0.15)",
-        // borderLeft: "10px solid #1E90FF",
-        backgroundColor: "white",
-      }}
-    >
-      <Paper p="md">
-        <h1>Check Result</h1>
-        <Grid>
-          <Grid.Col xs={12} sm={4}>
-            <Select
-              label="Semester"
-              placeholder="Semester"
-              data={[
-                { value: "1", label: "Semester 1" },
-                { value: "2", label: "Semester 2" },
-                { value: "3", label: "Semester 3" },
-                { value: "4", label: "Semester 4" },
-                { value: "5", label: "Semester 5" },
-                { value: "6", label: "Semester 6" },
-                { value: "7", label: "Semester 7" },
-                { value: "8", label: "Semester 8" },
-              ]}
-              value={selectedSemester}
-              onChange={(value) => setSelectedSemester(value)}
-            />
-          </Grid.Col>
-        </Grid>
-        <Box mt="md">
-          <Button onClick={handleSearch} size="sm">
-            View Result
-          </Button>
-        </Box>
-
-        {showContent && (
-          <ScrollArea mt="lg">
-            <Table striped highlightOnHover>
-              <thead>
-                <tr>
-                  <th>Course ID</th>
-                  <th>Course Name</th>
-                  <th>Credits</th>
-                  <th>Grade</th>
-                </tr>
-              </thead>
-              <tbody>{rows}</tbody>
-            </Table>
-            <div className="result-box">
-              <div className="box">
-                <span style={{ fontSize: "50px" }}>{spi}</span>
-                <span>SPI</span>
-              </div>
-              <div className="box">
-                <span style={{ fontSize: "50px" }}>{su}</span>
-                <span>SU</span>
-              </div>
-              <div className="box">
-                <span style={{ fontSize: "50px" }}>{tu}</span>
-                <span>TU</span>
-              </div>
-            </div>
-          </ScrollArea>
-        )}
-      </Paper>
-    </Container>
-  );
+function downloadBlob(blob, fileName) {
+  const fileBlob =
+    blob instanceof Blob ? blob : new Blob([blob], { type: "application/pdf" });
+  const url = window.URL.createObjectURL(fileBlob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  window.URL.revokeObjectURL(url);
 }
 
-export default CheckResult;
+export default function CheckResult() {
+  const semesterQuery = useQuery({
+    queryKey: ["student-semesters"],
+    queryFn: fetchStudentSemesters,
+  });
+
+  const [selectedSemesterId, setSelectedSemesterId] = useState(null);
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState(null);
+  const [hasSelectedFilters, setHasSelectedFilters] = useState(false);
+
+  const selectedSemester = (semesterQuery.data || []).find(
+    (item) => String(item.semester_id) === String(selectedSemesterId),
+  );
+
+  const resultQuery = useQuery({
+    queryKey: ["student-results", selectedSemesterId, selectedAcademicYear],
+    queryFn: () =>
+      fetchStudentResults({
+        semesterId: selectedSemesterId,
+        academicYear: selectedAcademicYear,
+      }),
+    enabled: Boolean(
+      hasSelectedFilters && selectedSemesterId && selectedAcademicYear,
+    ),
+  });
+
+  const marksheetMutation = useMutation({
+    mutationFn: fetchMarksheet,
+    onSuccess: (data) => downloadBlob(data, "marksheet.pdf"),
+  });
+
+  const reevaluationMutation = useMutation({
+    mutationFn: requestReevaluation,
+    onSuccess: () =>
+      notifications.show({
+        color: "green",
+        message: "Re-evaluation request submitted.",
+      }),
+  });
+
+  return (
+    <Stack gap="lg">
+      <Card withBorder radius="md">
+        <Group justify="space-between">
+          <div>
+            <Text fw={700}>Semester Results</Text>
+            <Text c="dimmed">
+              Published results are visible after academic admin approval.
+            </Text>
+          </div>
+          <Select
+            value={selectedSemesterId}
+            placeholder="Select semester"
+            data={(semesterQuery.data || []).map((semester) => ({
+              value: String(semester.semester_id),
+              label: `Semester ${semester.semester_no}`,
+            }))}
+            onChange={(value) => {
+              setHasSelectedFilters(Boolean(value));
+              setSelectedSemesterId(value);
+              const semesterRecord = (semesterQuery.data || []).find(
+                (item) => String(item.semester_id) === String(value),
+              );
+              setSelectedAcademicYear(
+                semesterRecord?.academic_years?.[0] || null,
+              );
+            }}
+          />
+          <Select
+            value={selectedAcademicYear}
+            placeholder="Select academic year"
+            data={(selectedSemester?.academic_years || []).map((year) => ({
+              value: year,
+              label: year,
+            }))}
+            onChange={(value) => {
+              setSelectedAcademicYear(value);
+              if (selectedSemesterId) {
+                setHasSelectedFilters(true);
+              }
+            }}
+          />
+        </Group>
+      </Card>
+      <Card withBorder radius="md">
+        {resultQuery.data?.results?.length ? (
+          <Stack>
+            <ResultTable rows={resultQuery.data.results} />
+            <Group justify="space-between">
+              <Text fw={700}>CPI: {resultQuery.data.cpi}</Text>
+              <Button
+                onClick={() =>
+                  marksheetMutation.mutate({
+                    semesterId: selectedSemesterId,
+                    academicYear: selectedAcademicYear,
+                    semesterNo: selectedSemester?.semester_no,
+                  })
+                }
+                loading={marksheetMutation.isPending}
+              >
+                Download Marksheet
+              </Button>
+            </Group>
+          </Stack>
+        ) : (
+          <Alert color="yellow">
+            {!hasSelectedFilters
+              ? "Select semester and academic year to view results."
+              : resultQuery.isLoading
+                ? "Loading results..."
+                : "No published results found yet."}
+          </Alert>
+        )}
+        {resultQuery.isError && (
+          <Alert color="red">
+            {resultQuery.error?.response?.data?.detail ||
+              "Unable to load results for selected semester."}
+          </Alert>
+        )}
+      </Card>
+      <ReevaluationForm
+        onSubmit={(values) => {
+          const courseId = Number(values.course_id);
+          const semesterId = Number(values.semester_id || selectedSemesterId);
+          const academicYear = values.academic_year || selectedAcademicYear;
+          if (!courseId || !semesterId || !academicYear || !values.reason) {
+            notifications.show({
+              color: "red",
+              message:
+                "Please select valid course/semester/year and enter reason.",
+            });
+            return;
+          }
+          reevaluationMutation.mutate({
+            course_id: courseId,
+            semester_id: semesterId,
+            academic_year: academicYear,
+            reason: values.reason,
+          });
+        }}
+        busy={reevaluationMutation.isPending}
+        defaultSemesterId={selectedSemesterId}
+        defaultAcademicYear={selectedAcademicYear}
+        semesterOptions={(semesterQuery.data || []).map((semester) => ({
+          value: String(semester.semester_id),
+          label: `Semester ${semester.semester_no}`,
+        }))}
+        academicYearOptions={(selectedSemester?.academic_years || []).map(
+          (year) => ({
+            value: year,
+            label: year,
+          }),
+        )}
+        courseOptions={(resultQuery.data?.results || []).map((row) => ({
+          value: String(row.course_id),
+          label: `${row.course_code} - ${row.course_name}`,
+        }))}
+      />
+      {reevaluationMutation.isError && (
+        <Alert color="red">
+          {reevaluationMutation.error?.response?.data?.detail ||
+            "Unable to submit re-evaluation request."}
+        </Alert>
+      )}
+      {semesterQuery.isError && (
+        <Alert color="red">Unable to load semester options.</Alert>
+      )}
+    </Stack>
+  );
+}

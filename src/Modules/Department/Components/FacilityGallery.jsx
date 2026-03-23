@@ -17,7 +17,7 @@ import {
   Group,
 } from "@mantine/core";
 import { IconTrash } from "@tabler/icons-react";
-import { host } from "../../../routes/globalRoutes";
+import { host, mediaRoute } from "../../../routes/globalRoutes";
 
 function FacilityGallery({ branch }) {
   const [facilities, setFacilities] = useState([]);
@@ -139,7 +139,7 @@ function FacilityGallery({ branch }) {
 
                   {facility.picture && (
                     <Image
-                      src={`http://127.0.0.1:8000${facility.picture}`}
+                      src={`${mediaRoute}${facility.picture.replace(/^\/media\//, "")}`}
                       alt={facility.name}
                       fit="contain"
                       style={{

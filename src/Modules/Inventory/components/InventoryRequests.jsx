@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button, Group, Table, Badge, Select } from "@mantine/core";
 import { InventoryRequest } from "../../../routes/inventoryRoutes";
+import { host } from "../../../routes/globalRoutes";
 
 function InventoryRequests() {
   const [filter, setFilter] = useState("all");
@@ -37,7 +38,7 @@ function InventoryRequests() {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/inventory/api/requests/${requestId}/`,
+        `${host}/inventory/api/requests/${requestId}/`,
         {
           method: "PATCH",
           headers: {
